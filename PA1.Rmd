@@ -1,0 +1,100 @@
+---
+title: "PA1_template"
+author: "Vaibhav Chugh"
+date: "7/6/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+It is now possible to collect a large amount of data about personal movement using activity monitoring devices such as a Fitbit, Nike Fuelband, or Jawbone Up. These type of devices are part of the “quantified self” movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. But this data remains under-utilized because the raw data is hard to obtain and there are limited tools and statistical methods available for interpreting the data. This assignment makes use of data from a personal activity monitoring device. This device collects data at 5 minute intervals through out the day. The data consists of two months of data from an anonymous individual collected during the months of October and November, 2012 and include the number of steps taken in 5 minute intervals each day.
+
+## Loading and preprocessing the data
+
+```{r df}
+if (!file.exists("activity.csv") ){
+    dlurl <- 'http://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip'  
+    download.file(dlurl,destfile='repdata%2Fdata%2Factivity.zip',mode='wb')  
+    unzip('repdata%2Fdata%2Factivity.zip')
+}
+
+# Read data
+df <- read.csv("activity.csv")
+df$date <- as.Date(df$date)
+```
+
+## Statistics per day [sum]
+
+
+```{r bySum, echo=TRUE}
+bySum <- aggregate(steps ~ date, df, sum)
+hist(bySum$steps, main = paste("Total Steps Each Day"), col="blue",xlab="Number of Steps")
+
+m1 <- mean(bySum$steps)
+m1
+me1 <- median(bySum$steps)
+me1
+```
+
+## Average daily activity pattern
+ 
+```{r byMean, echo=TRUE}
+byMean <- aggregate(steps ~ interval, df, mean)
+plot(byMean$interval,byMean$steps, type = "l", xlab="Interval", ylab="Number of Steps",main="Average Number of Steps per Day by Interval")
+
+byMean[byMean$steps == max(byMean$steps), 1]
+```
+
+## Imputing missing values
+
+```{r NA, echo=TRUE}
+
+dfNew <- df
+sum(!complete.cases(df))
+
+for (i in 1:nrow(dfNew)) {
+  if(is.na(dfNew$steps[i])){
+    dfNew$steps[i] = byMean[byMean$interval == dfNew$interval[i],2]
+  }
+  
+}
+
+bySumNew <- aggregate(steps ~ date, dfNew, sum)
+hist(bySumNew$steps, main = paste("Total Steps Each Day"), col="blue",xlab="Number of Steps")
+hist(bySum$steps, main = paste("Total Steps Each Day"), col="red",xlab="Number of Steps",add=T)
+legend("topright", c("Imputed", "Non-imputed"), col=c("blue", "red"), lwd=10)
+
+
+m2 <- mean(bySumNew$steps)
+me2 <- median(bySumNew$steps)
+m2
+me2
+
+```
+Difference between means:
+``` {r}
+m1-m2
+```
+Difference between medians:
+``` {r}
+me1-me2
+```
+
+Imputing missing data has no effect on the overall mean values but the median value after imputing has increased.
+
+## Analyzing patterns between weekdays and weekends
+
+
+```{r AP, echo=TRUE}
+w <- c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")
+df$days <- as.factor(ifelse(is.element(weekdays(as.Date(df$date)),w), "Weekday", "Weekend"))
+byMeanNew <- aggregate(steps ~ interval + days, df, mean)
+library(lattice)
+xyplot(byMeanNew$steps ~ byMeanNew$interval|byMeanNew$days, main="Average Steps per Day by Interval",xlab="Interval", ylab="Steps",layout=c(1,2), type="l")
+```
+
+
+
